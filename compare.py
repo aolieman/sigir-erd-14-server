@@ -45,7 +45,7 @@ def through_spotlight(text, cand_param, conf=0.0, supp=0):
                 annotations.append(ann)
     return annotations
 
-def short_output(target_db, text_id, text, conf=0.03, supp=0, posr=0.0):
+def short_output(target_db, text_id, text, conf=0.0, supp=0, posr=0.0):
     """
     Get annotations from DBp Spotlight and format them as TSV.
     
