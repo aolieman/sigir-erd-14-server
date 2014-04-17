@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import urllib2
+import urllib2, json
 from spotlight import annotate, candidates, SpotlightException
 from functools import partial
 
@@ -59,6 +59,11 @@ def short_output(target_db, text_id, text, conf=0.0, supp=0, posr=0.0):
     out_str = ""
     text = text.decode('utf8')
     annotations = through_spotlight(text, 'multi', conf, supp)
+    
+    # Append annotations to a log file
+    with open("short_annotations.log", 'a') as f:
+        json.dump(annotations, f, indent=4, separators=(',', ': '))
+        f.write(",\n")
     
     if not annotations:
         return ""

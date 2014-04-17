@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+from logging import handlers
 from flask import Flask, request
 from vocabulary import read_target_db
 from compare import short_output
@@ -9,7 +10,6 @@ target_db = read_target_db(verbosity=1)
 
 # Initialize a Flask instance
 app = Flask(__name__)
-#app.logger.setLevel(logging.INFO)
 
 # Initialize runtime parameters
 conf = 0.03
@@ -39,6 +39,7 @@ def short_track(target_db=target_db):
     )
         
     app.logger.info("\t".join((text_id, text, run_id)))
+    app.logger.info(body_str + "\n")
     headers = {"Content-Type": "text/plain; charset=utf-8"}
     return (body_str, 200, headers)
 
@@ -52,8 +53,15 @@ def long_track():
 
 if __name__ == '__main__':    
     
+    # Set up logging
+    handler = handlers.RotatingFileHandler(
+        'short_web.log', maxBytes=10000, backupCount=1
+    )
+    handler.setLevel(logging.INFO)
+    app.logger.addHandler(handler)    
+    
     ## Local use only
     # app.run(debug=True)
     ## Production only
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=443)
     pass
