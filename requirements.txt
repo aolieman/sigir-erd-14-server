@@ -1,0 +1,2 @@
+Flask>=0.10.1
+git+https://github.com/aolieman/pyspotlight.git

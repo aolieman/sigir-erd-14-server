@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import logging
+import logging, json
 from logging import handlers
 from flask import Flask, request
 from vocabulary import read_target_db
@@ -38,8 +38,9 @@ def short_track(target_db=target_db):
         target_db, text_id, text, conf, supp, posr
     )
         
-    app.logger.info("\t".join((text_id, text, run_id)))
-    app.logger.info(body_str + "\n")
+    app.logger.warning("\t".join((text_id, text, run_id)))
+    with open("{0}.tsv".format(run_id), 'a') as f:
+        f.write(body_str)
     headers = {"Content-Type": "text/plain; charset=utf-8"}
     return (body_str, 200, headers)
 
@@ -55,13 +56,13 @@ if __name__ == '__main__':
     
     # Set up logging
     handler = handlers.RotatingFileHandler(
-        'short_web.log', maxBytes=10000, backupCount=1
+        'short_queries.tsv', maxBytes=10000, backupCount=1
     )
     handler.setLevel(logging.INFO)
     app.logger.addHandler(handler)    
     
     ## Local use only
     # app.run(debug=True)
-    ## Production only
-    app.run(host='0.0.0.0', port=443)
+    ## Public (any originating IP allowed)
+    app.run(host='0.0.0.0', port=5000)
     pass
