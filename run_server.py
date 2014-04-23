@@ -11,11 +11,21 @@ target_db = read_target_db(verbosity=1)
 # Initialize a Flask instance
 app = Flask(__name__)
 
+# Set up logging
+handler = handlers.RotatingFileHandler(
+    'logs/short_queries.tsv', maxBytes=10000, backupCount=1
+)
+handler.setLevel(logging.INFO)
+app.logger.addHandler(handler)
+
 # Initialize runtime parameters
 conf = 0.03
 supp = 0
 posr = 0.0
 
+##
+# Flask views
+##
 @app.route('/parameters', methods=['GET'])
 def set_parameters():
     global conf, supp, posr
@@ -39,9 +49,15 @@ def short_track(target_db=target_db):
     )
         
     app.logger.warning("\t".join((text_id, text, run_id)))
-    with open("{0}.tsv".format(run_id), 'a') as f:
+    with open("logs/{0}.tsv".format(run_id), 'a') as f:
         f.write(body_str)
     headers = {"Content-Type": "text/plain; charset=utf-8"}
+    
+    # Rotate the query log file on the final query
+    if text_id in {"do_task_1-100.tsv-99",
+                   "TREC-91"}:
+        handler.doRollover()
+    
     return (body_str, 200, headers)
 
 @app.route('/long', methods=['POST'])
@@ -54,15 +70,8 @@ def long_track():
 
 if __name__ == '__main__':    
     
-    # Set up logging
-    handler = handlers.RotatingFileHandler(
-        'short_queries.tsv', maxBytes=10000, backupCount=1
-    )
-    handler.setLevel(logging.INFO)
-    app.logger.addHandler(handler)    
-    
     ## Local use only
     # app.run(debug=True)
     ## Public (any originating IP allowed)
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=8080)
     pass

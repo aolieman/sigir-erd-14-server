@@ -61,7 +61,7 @@ def short_output(target_db, text_id, text, conf=0.0, supp=0, posr=0.0):
     annotations = through_spotlight(text, 'multi', conf, supp)
     
     # Append annotations to a log file
-    with open("short_annotations.json", 'a') as f:
+    with open("logs/short_annotations.json", 'a') as f:
         json.dump(annotations, f, indent=4, separators=(',', ': '))
         f.write(",\n")
     
