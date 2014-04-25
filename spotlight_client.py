@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+"""
+API client functions that offload requests
+to a DBpedia Spotlight server.
+"""
+
 import urllib2, json
 from spotlight import annotate, candidates, SpotlightException
 from functools import partial

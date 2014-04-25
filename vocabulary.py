@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Helper functions to deal with the vocabulary a.k.a. target database.
+"""
 import csv
 import mqlkey
 

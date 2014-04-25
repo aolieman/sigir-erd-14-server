@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
-import logging, json
+"""
+Run a Flask server that responds to requests in the ERD14 format.
+"""
+
+import logging
 from logging import handlers
 from flask import Flask, request
 from vocabulary import read_target_db
-from compare import short_output
+from spotlight_client import short_output
 
 # Read the target db into a dict
 target_db = read_target_db(verbosity=1)
@@ -51,12 +55,9 @@ def short_track(target_db=target_db):
     app.logger.warning("\t".join((text_id, text, run_id)))
     with open("logs/{0}.tsv".format(run_id), 'a') as f:
         f.write(body_str)
+    rotate_on_final_query(text_id)        
+        
     headers = {"Content-Type": "text/plain; charset=utf-8"}
-    
-    # Rotate the query log file on the final query
-    if text_id in {"do_task_1-100.tsv-99",
-                   "TREC-91"}:
-        handler.doRollover()
     
     return (body_str, 200, headers)
 
@@ -66,7 +67,18 @@ def long_track():
     run_id = request.form['runID']
     text_id = request.form['TextID']
     text = request.form['Text']
-    return 'Hello World!'
+    return 'Not yet implemented'
+
+
+##
+# Helper functions
+##
+def rotate_on_final_query(text_id):
+    """Rotate the query log file on the final query
+    """
+    if text_id in {"do_task_1-100.tsv-99",
+                   "TREC-91"}:
+        handler.doRollover()
 
 if __name__ == '__main__':    
     
