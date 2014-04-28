@@ -9,7 +9,7 @@ from spotlight import annotate, candidates, SpotlightException
 from functools import partial
 
 
-def through_spotlight(text, cand_param, conf=0.0, supp=0):
+def through_spotlight(spotlight_url, text, cand_param, conf=0.0, supp=0):
     if cand_param == "single":
         cand_uri = "annotate"
         cand_function = annotate
@@ -17,14 +17,13 @@ def through_spotlight(text, cand_param, conf=0.0, supp=0):
         cand_uri = "candidates"
         cand_function = candidates
     else: raise Exception("Incorrect cand_param provided")
-    en_sztaki = 'http://spotlight.sztaki.hu:2222/rest/%s' % cand_uri
-    en_cleverdon = 'http://cleverdon.hum.uva.nl:8082/rest/%s' % cand_uri
+    api_url = spotlight_url + cand_uri
 
     no_coref_filter = {
         'coreferenceResolution': False
     }
 
-    api = partial(cand_function, en_sztaki,
+    api = partial(cand_function, api_url,
                   confidence=conf, support=supp,
                   spotter='Default', filters=no_coref_filter)
     try:
@@ -50,12 +49,14 @@ def through_spotlight(text, cand_param, conf=0.0, supp=0):
                 annotations.append(ann)
     return annotations
 
-def short_output(target_db, text_id, text, conf=0.0, supp=0, posr=0.0):
+def short_output(target_db, text_id, spotlight_url,
+                 text, conf=0.0, supp=0, posr=0.0):
     """
     Get annotations from DBp Spotlight and format them as TSV.
     
     target_db: dict with target entities in this ERD challenge
     text_id: query id string given in the request
+    spotlight_url: URL of a DBpedia Spotlight REST endpoint (incl. trailing slash)
     text: input text in UTF-8 encoding
     conf: confidence threshold for DBp Spotlight
     supp: support threshold for DBp Spotlight
@@ -63,7 +64,7 @@ def short_output(target_db, text_id, text, conf=0.0, supp=0, posr=0.0):
     """
     out_str = ""
     text = text.decode('utf8')
-    annotations = through_spotlight(text, 'multi', conf, supp)
+    annotations = through_spotlight(spotlight_url, text, 'multi', conf, supp)
     
     # Append annotations to a log file
     with open("logs/short_annotations.json", 'a') as f:
@@ -88,5 +89,43 @@ def short_output(target_db, text_id, text, conf=0.0, supp=0, posr=0.0):
             if cand[u'percentageOfSecondRank'] < posr:
                 break
                 
+    return out_str.encode('utf8')
+    
+def long_output(target_db, text_id, spotlight_url,
+                text, conf=0.0, supp=0):
+    """
+    Get annotations from DBp Spotlight and format them as TSV.
+    
+    target_db: dict with target entities in this ERD challenge
+    text_id: query id string given in the request
+    spotlight_url: URL of a DBp Spotlight REST endpoint (incl. trailing slash)
+    text: input text in UTF-8 encoding
+    conf: confidence threshold for DBp Spotlight
+    supp: support threshold for DBp Spotlight
+    """
+    out_str = ""
+    text = text.decode('utf8')
+    annotations = through_spotlight(spotlight_url, text, 'single', conf, supp)
+    
+    # Write annotations to a log file
+    with open("logs/long/{0}_annotations.json".format(text_id), 
+              'wb') as f:
+        json.dump(annotations, f, indent=4, separators=(',', ': '))
+    
+    if not annotations:
+        return ""
+        
+    for ann in annotations:
+        if ann['URI'] in target_db:
+            fid = target_db[ann['URI']][0]
+            mention = str(ann[u'surfaceForm'])
+            begin_offset = str(ann[u'offset'])
+            end_offset = str(ann[u'offset'] + len(mention))
+            score = u"{0:.2f}".format(ann[u'similarityScore'])
+            out_str += u"\n" + u"\t".join(
+                (text_id, begin_offset, end_offset, 
+                 fid, ann['URI'], mention, score, "0")
+            )
+            
     return out_str.encode('utf8')
     
