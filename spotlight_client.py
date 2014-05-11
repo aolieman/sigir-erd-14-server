@@ -63,7 +63,6 @@ def short_output(target_db, text_id, spotlight_url,
     posr: minimum 'percentage of second rank' to include further candidates
     """
     out_str = ""
-    text = text.decode('utf8')
     annotations = through_spotlight(spotlight_url, text, 'multi', conf, supp)
     
     # Append annotations to a log file
@@ -89,7 +88,7 @@ def short_output(target_db, text_id, spotlight_url,
             if cand[u'percentageOfSecondRank'] < posr:
                 break
                 
-    return out_str.encode('utf8')
+    return out_str
     
 def long_output(target_db, text_id, spotlight_url,
                 text, conf=0.0, supp=0):
@@ -104,7 +103,6 @@ def long_output(target_db, text_id, spotlight_url,
     supp: support threshold for DBp Spotlight
     """
     out_str = ""
-    text = text.decode('utf8')
     annotations = through_spotlight(spotlight_url, text, 'single', conf, supp)
     
     # Write annotations to a log file
@@ -127,5 +125,4 @@ def long_output(target_db, text_id, spotlight_url,
                  fid, ann['URI'], mention, score, "0")
             )
             
-    return out_str.encode('utf8')
-    
+    return out_str

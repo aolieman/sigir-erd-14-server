@@ -3,7 +3,7 @@
 Run a Flask server that responds to requests in the ERD14 format.
 """
 
-import logging
+import logging, re
 from logging import handlers
 from flask import Flask, request
 from vocabulary import read_target_db
@@ -48,7 +48,7 @@ def short_track(target_db=target_db):
     # Get request parameter values
     run_id = request.form['runID']
     text_id = request.form['TextID']
-    text = request.form['Text']
+    text = remove_control_chars(request.form['Text'])
     
     body_str = short_output(
         target_db, text_id, spotlight_url,
@@ -69,17 +69,23 @@ def long_track():
     # Get request parameter values
     run_id = request.form['runID']
     text_id = request.form['TextID']
-    text = request.form['Text']
-    
+    text = clean_cp1252(request.form['Text'])
+        
     body_str = long_output(
         target_db, text_id, spotlight_url, text, conf, supp
     )
     
     app.logger.warning("\t".join((text_id, repr(text[:500]), run_id)))
     with open("logs/long/{0}.txt".format(text_id), 'w') as f:
-        f.write(text)
+        try:
+            f.write(text)
+        except UnicodeEncodeError:
+            f.write(repr(text))
     with open("logs/long/{0}.tsv".format(run_id), 'a') as f:
-        f.write(body_str)
+        try:
+            f.write(body_str)
+        except UnicodeEncodeError:
+            f.write(repr(body_str))
     rotate_on_final_query(text_id)        
         
     headers = {"Content-Type": "text/plain; charset=utf-8"}
@@ -95,8 +101,15 @@ def rotate_on_final_query(text_id):
     """
     if text_id in {"do_task_1-100.tsv-99",
                    "TREC-91",
-                   "mainbody-00045"}:
+                   "msn-2014-03-28-01515"}:
         handler.doRollover()
+        
+control_chars = ''.join(map(unichr, range(0,32) + range(127,160)))
+control_char_re = re.compile('[%s]' % re.escape(control_chars))
+
+def clean_cp1252(s):
+    s = s.encode('cp1252').decode('utf8', errors='replace')
+    return control_char_re.sub('', s)
 
 if __name__ == '__main__':    
     
