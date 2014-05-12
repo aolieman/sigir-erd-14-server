@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
 """Helper functions to deal with the vocabulary a.k.a. target database.
 """
-import csv, pickle
+import sys, csv, pickle
 import mqlkey
 
 def get_target_db():
+    print "Loading target_db...",
+    sys.stdout.flush()
     try:
         tdb = pickle.load(open('target_db.pickle', 'rb'))
+        print "Done!"
     except IOError:
         tdb = read_target_db(verbosity=1)
+        print "Reading TSV"
     return tdb
 
 def read_target_db(fpath="../entity.tsv", verbosity=0):
@@ -28,6 +32,9 @@ def read_target_db(fpath="../entity.tsv", verbosity=0):
             wiki_id = mqlkey.unquotekey(row[2].split('en_title/')[1])
             target_db[wiki_id] = tuple(row)
             
+    print "Dumping target_db.pickle ...",
+    sys.stdout.flush()
     pickle.dump(target_db, open('target_db.pickle', 'wb'))
+    print "Done!"
             
     return target_db

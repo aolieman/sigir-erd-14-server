@@ -48,7 +48,7 @@ def short_track(target_db=target_db):
     # Get request parameter values
     run_id = request.form['runID']
     text_id = request.form['TextID']
-    text = remove_control_chars(request.form['Text'])
+    text = request.form['Text']
     
     body_str = short_output(
         target_db, text_id, spotlight_url,
@@ -69,7 +69,8 @@ def long_track():
     # Get request parameter values
     run_id = request.form['runID']
     text_id = request.form['TextID']
-    text = remove_control_chars(request.form['Text'])
+    print repr(request.form['Text'])
+    text = request.form['Text']
         
     body_str = long_output(
         target_db, text_id, spotlight_url, text, conf, supp
@@ -80,12 +81,12 @@ def long_track():
         try:
             f.write(text)
         except UnicodeEncodeError:
-            f.write(repr(text))
+            f.write(text.encode('utf8'))
     with open("logs/long/{0}.tsv".format(run_id), 'a') as f:
         try:
             f.write(body_str)
         except UnicodeEncodeError:
-            f.write(repr(body_str))
+            f.write(body_str.encode('utf8'))
     rotate_on_final_query(text_id)        
         
     headers = {"Content-Type": "text/plain; charset=utf-8"}
@@ -119,5 +120,5 @@ if __name__ == '__main__':
     ## Local use only
     # app.run(debug=True)
     ## Public (any originating IP allowed)
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=8080)
     pass

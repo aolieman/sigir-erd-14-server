@@ -116,7 +116,7 @@ def long_output(target_db, text_id, spotlight_url,
     for ann in annotations:
         if ann['URI'] in target_db:
             fid = target_db[ann['URI']][0]
-            mention = str(ann[u'surfaceForm'])
+            mention = unicode(ann[u'surfaceForm'])
             begin_offset = str(ann[u'offset'])
             end_offset = str(ann[u'offset'] + len(mention))
             score = u"{0:.2f}".format(ann[u'similarityScore'])
