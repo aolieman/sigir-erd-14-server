@@ -1,9 +1,15 @@
 # -*- coding: utf-8 -*-
 """Helper functions to deal with the vocabulary a.k.a. target database.
 """
-import csv
+import csv, pickle
 import mqlkey
 
+def get_target_db():
+    try:
+        tdb = pickle.load(open('target_db.pickle', 'rb'))
+    except IOError:
+        tdb = read_target_db(verbosity=1)
+    return tdb
 
 def read_target_db(fpath="../entity.tsv", verbosity=0):
     '''Read the target db into a dict with wiki_id as keys
@@ -21,5 +27,7 @@ def read_target_db(fpath="../entity.tsv", verbosity=0):
                 
             wiki_id = mqlkey.unquotekey(row[2].split('en_title/')[1])
             target_db[wiki_id] = tuple(row)
+            
+    pickle.dump(target_db, open('target_db.pickle', 'wb'))
             
     return target_db

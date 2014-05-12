@@ -6,11 +6,11 @@ Run a Flask server that responds to requests in the ERD14 format.
 import logging, re
 from logging import handlers
 from flask import Flask, request
-from vocabulary import read_target_db
+from vocabulary import get_target_db
 from spotlight_client import short_output, long_output
 
 # Read the target db into a dict
-target_db = read_target_db(verbosity=1)
+target_db = get_target_db()
 
 # Initialize a Flask instance
 app = Flask(__name__)
