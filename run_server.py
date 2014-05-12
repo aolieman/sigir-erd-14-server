@@ -3,7 +3,7 @@
 Run a Flask server that responds to requests in the ERD14 format.
 """
 
-import logging, re
+import logging
 from logging import handlers
 from flask import Flask, request
 from vocabulary import get_target_db
@@ -69,7 +69,6 @@ def long_track():
     # Get request parameter values
     run_id = request.form['runID']
     text_id = request.form['TextID']
-    print repr(request.form['Text'])
     text = request.form['Text']
         
     body_str = long_output(
@@ -105,15 +104,6 @@ def rotate_on_final_query(text_id):
                    "msn-2014-03-28-01515"}:
         handler.doRollover()
         
-control_chars = ''.join(map(unichr, range(0,32) + range(127,160)))
-control_char_re = re.compile('[%s]' % re.escape(control_chars))
-
-def clean_cp1252(s):
-    s = s.encode('cp1252').decode('utf8', errors='replace')
-    return control_char_re.sub('', s)
-    
-def remove_control_chars(s):
-    return control_char_re.sub('', s)
 
 if __name__ == '__main__':    
     
