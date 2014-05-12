@@ -17,7 +17,7 @@ app = Flask(__name__)
 
 # Set up logging
 handler = handlers.RotatingFileHandler(
-    'logs/short_queries.tsv', maxBytes=10000, backupCount=1
+    'logs/all_queries.tsv', maxBytes=67000, backupCount=1
 )
 handler.setLevel(logging.INFO)
 app.logger.addHandler(handler)
