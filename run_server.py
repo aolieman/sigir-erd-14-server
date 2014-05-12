@@ -5,15 +5,20 @@ Run a Flask server that responds to requests in the ERD14 format.
 
 import logging
 from logging import handlers
-from flask import Flask, request
+from flask import Flask, request, wrappers
 from vocabulary import get_target_db
 from spotlight_client import short_output, long_output
+
+# Subclass Flask Request
+class Request(wrappers.Request):
+    charset = 'utf-8'
 
 # Read the target db into a dict
 target_db = get_target_db()
 
 # Initialize a Flask instance
 app = Flask(__name__)
+app.request_class = Request
 
 # Set up logging
 handler = handlers.RotatingFileHandler(
@@ -69,9 +74,8 @@ def long_track():
     # Get request parameter values
     run_id = request.form['runID']
     text_id = request.form['TextID']
-    print request.headers
-    print request.data
     text = request.form['Text']
+    print "charset:", request.charset
         
     body_str = long_output(
         target_db, text_id, spotlight_url, text, conf, supp
