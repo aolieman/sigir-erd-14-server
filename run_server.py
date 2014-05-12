@@ -69,7 +69,7 @@ def long_track():
     # Get request parameter values
     run_id = request.form['runID']
     text_id = request.form['TextID']
-    text = clean_cp1252(request.form['Text'])
+    text = remove_control_chars(request.form['Text'])
         
     body_str = long_output(
         target_db, text_id, spotlight_url, text, conf, supp
@@ -109,6 +109,9 @@ control_char_re = re.compile('[%s]' % re.escape(control_chars))
 
 def clean_cp1252(s):
     s = s.encode('cp1252').decode('utf8', errors='replace')
+    return control_char_re.sub('', s)
+    
+def remove_control_chars(s):
     return control_char_re.sub('', s)
 
 if __name__ == '__main__':    
