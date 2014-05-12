@@ -69,6 +69,8 @@ def long_track():
     # Get request parameter values
     run_id = request.form['runID']
     text_id = request.form['TextID']
+    print request.headers
+    print request.data
     text = request.form['Text']
         
     body_str = long_output(
