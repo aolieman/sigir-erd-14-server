@@ -11,8 +11,8 @@ def get_target_db():
         tdb = pickle.load(open('target_db.pickle', 'rb'))
         print "Done!"
     except IOError:
-        tdb = read_target_db(verbosity=1)
         print "Reading TSV"
+        tdb = read_target_db(verbosity=1)
     return tdb
 
 def read_target_db(fpath="../entity.tsv", verbosity=0):

@@ -47,6 +47,17 @@ def set_parameters():
           "support={2:d}, PoSR={3:.2f}".format(spotlight_url, conf, supp, posr)
     app.logger.warning(msg)
     return msg
+    
+@app.route('/echo', methods=['POST'])
+def echo():
+    # Get request parameter values
+    run_id = request.form['runID']
+    text_id = request.form['TextID']
+    text = request.form['Text']
+    
+    body_str = run_id+"\n"+text_id+"\n\n"+text
+    headers = {"Content-Type": "text/plain; charset=utf-8"}
+    return (body_str, 200, headers)
 
 @app.route('/short', methods=['POST'])
 def short_track(target_db=target_db):
@@ -75,7 +86,6 @@ def long_track():
     run_id = request.form['runID']
     text_id = request.form['TextID']
     text = request.form['Text']
-    print "charset:", request.charset
         
     body_str = long_output(
         target_db, text_id, spotlight_url, text, conf, supp
