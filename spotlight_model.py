@@ -43,15 +43,24 @@ def rewrite_tsv(file_path, rewrite_row, count_deltas=None):
             for i, row in enumerate(tsvr):
                 mod_rows = rewrite_row(row, count_deltas)
                 for row in mod_rows:
-                    if "\t" in row[0]:
-                        print "WARN: row[0]='%s'" % row[0]
-                        row[0] = row[0].split("\t")[0]
-                    tsvw.writerow(row)
+                    try:
+                        tsvw.writerow(row)
+                    except csv.Error:
+                        clean = clean_row(row)
+                        tsvw.writerow(clean)
                 if i % 10000 == 0:
                     print "Processed %i0K rows from %s" % (i/10000, file_path)
                 
     return count_deltas, out_dirpath
     
+def clean_row(row):
+    clean = []
+    for col in row:
+        if isinstance(col, basestring):
+            clean.append(col.split('\t')[0])
+        else:
+            clean.append(col)
+    return clean
 
 # UriCounts, TokenCounts
 # TODO: deal with redirects & disambiguation pages
@@ -121,7 +130,7 @@ for row in tsvreader:
 for sf, dc in count_deltas.iteritems():
     append row [sf, dc, -1]
 """
-def sf_and_total_counts(file_path, count_deltas):
+def sf_and_total_counts(file_path, count_deltas, add_lowercase=True):
     def update_counts(row, count_deltas):
         this_change = count_deltas.pop(row[0], 0)
         if this_change:
@@ -142,22 +151,25 @@ def sf_and_total_counts(file_path, count_deltas):
                     
     _, base_path = rewrite_tsv(file_path, update_counts, count_deltas)
     
-    # Add rows for lowercase duplicates
-    _, fname = os.path.split(file_path)
-    with open(os.path.join(base_path, fname), 'a') as out_f:
-        tsvw = csv.writer(
-            out_f, delimiter='\t', encoding='utf-8', quoting=csv.QUOTE_NONE,
-            lineterminator='\n', escapechar=None
-        )
-        print "Adding {0} lowercase duplicates".format(len(count_deltas))
-        for sf, dc in count_deltas.iteritems():
-            if dc > 0:
-                tsvw.writerow([sf, dc, -1])
+    if add_lowercase:
+        # Add rows for lowercase duplicates
+        _, fname = os.path.split(file_path)
+        with open(os.path.join(base_path, fname), 'a') as out_f:
+            tsvw = csv.writer(
+                out_f, delimiter='\t', encoding='utf-8', quoting=csv.QUOTE_NONE,
+                lineterminator='\n', escapechar=None
+            )
+            print "Adding {0} lowercase duplicates".format(len(count_deltas))
+            for sf, dc in count_deltas.iteritems():
+                if dc > 0:
+                    tsvw.writerow([sf, dc, -1])
     
 # Rewrite all raw data files
 def rewrite_all(base_path):
     uri_counts(os.path.join(base_path, "uriCounts"))
     token_counts(os.path.join(base_path, "tokenCounts"))
     count_deltas = pair_counts(os.path.join(base_path, "pairCounts"))
-    sf_and_total_counts(os.path.join(base_path, "sfAndTotalCounts"), count_deltas)
+    sf_and_total_counts(
+        os.path.join(base_path, "sfAndTotalCounts"), count_deltas, add_lowercase=False
+    )
     return count_deltas
