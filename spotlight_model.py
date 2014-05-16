@@ -57,7 +57,7 @@ def clean_row(row):
     clean = []
     for col in row:
         if isinstance(col, basestring):
-            clean.append(col.split('\t')[0])
+            clean.append(col.split('\t')[0].split('\n')[0])
         else:
             clean.append(col)
     return clean
@@ -162,7 +162,7 @@ def sf_and_total_counts(file_path, count_deltas, add_lowercase=True):
             print "Adding {0} lowercase duplicates".format(len(count_deltas))
             for sf, dc in count_deltas.iteritems():
                 if dc > 0:
-                    tsvw.writerow([sf, dc, -1])
+                    tsvw.writerow(clean_row([sf, dc, -1]))
     
 # Rewrite all raw data files
 def rewrite_all(base_path):
