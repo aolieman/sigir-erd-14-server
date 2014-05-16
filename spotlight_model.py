@@ -55,6 +55,7 @@ def rewrite_tsv(file_path, rewrite_row, count_deltas=None):
     
 def clean_row(row):
     clean = []
+    print "clean_row(%s)" % repr(row)
     for col in row:
         if isinstance(col, basestring):
             clean.append(col.split('\t')[0].split('\n')[0])
