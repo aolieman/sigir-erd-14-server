@@ -32,12 +32,12 @@ def rewrite_tsv(file_path, rewrite_row, count_deltas=None):
     
     with open(file_path, 'rb') as in_f:
         tsvr = csv.reader(
-            in_f, delimiter='\t', encoding='utf-8', 
+            in_f, delimiter='\t', encoding='utf-8', quotechar="|",
             quoting=csv.QUOTE_NONE, lineterminator='\n'
         )
         with open(os.path.join(out_dirpath, fname), 'wb') as out_f:
             tsvw = csv.writer(
-                out_f, delimiter='\t', encoding='utf-8',
+                out_f, delimiter='\t', encoding='utf-8', quotechar="|",
                 quoting=csv.QUOTE_NONE, lineterminator='\n', escapechar=None
             )
             for i, row in enumerate(tsvr):
@@ -158,7 +158,7 @@ def sf_and_total_counts(file_path, count_deltas, add_lowercase=True):
         with open(os.path.join(base_path, fname), 'a') as out_f:
             tsvw = csv.writer(
                 out_f, delimiter='\t', encoding='utf-8', quoting=csv.QUOTE_NONE,
-                lineterminator='\n', escapechar=None
+                lineterminator='\n', escapechar=None, quotechar="|"
             )
             print "Adding {0} lowercase duplicates".format(len(count_deltas))
             for sf, dc in count_deltas.iteritems():
