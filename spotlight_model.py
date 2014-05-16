@@ -31,12 +31,21 @@ def rewrite_tsv(file_path, rewrite_row, count_deltas=None):
         os.makedir(out_dirpath)
     
     with open(file_path, 'rb') as in_f:
-        tsvr = csv.reader(in_f, delimiter='\t', encoding='utf8')
+        tsvr = csv.reader(
+            in_f, delimiter='\t', encoding='utf-8', 
+            quoting=csv.QUOTE_NONE, lineterminator='\n'
+        )
         with open(os.path.join(out_dirpath, fname), 'wb') as out_f:
-            tsvw = csv.writer(out_f, delimiter='\t', encoding='utf8')
+            tsvw = csv.writer(
+                out_f, delimiter='\t', encoding='utf-8',
+                quoting=csv.QUOTE_NONE, lineterminator='\n', escapechar=None
+            )
             for i, row in enumerate(tsvr):
                 mod_rows = rewrite_row(row, count_deltas)
                 for row in mod_rows:
+                    if "\t" in row[0]:
+                        print "WARN: row[0]='%s'" % row[0]
+                        row[0] = row[0].split("\t")[0]
                     tsvw.writerow(row)
                 if i % 10000 == 0:
                     print "Processed %i0K rows from %s" % (i/10000, file_path)
@@ -136,7 +145,10 @@ def sf_and_total_counts(file_path, count_deltas):
     # Add rows for lowercase duplicates
     _, fname = os.path.split(file_path)
     with open(os.path.join(base_path, fname), 'a') as out_f:
-        tsvw = csv.writer(out_f, delimiter='\t', encoding='utf8')
+        tsvw = csv.writer(
+            out_f, delimiter='\t', encoding='utf-8', quoting=csv.QUOTE_NONE,
+            lineterminator='\n', escapechar=None
+        )
         print "Adding {0} lowercase duplicates".format(len(count_deltas))
         for sf, dc in count_deltas.iteritems():
             if dc > 0:
@@ -148,3 +160,4 @@ def rewrite_all(base_path):
     token_counts(os.path.join(base_path, "tokenCounts"))
     count_deltas = pair_counts(os.path.join(base_path, "pairCounts"))
     sf_and_total_counts(os.path.join(base_path, "sfAndTotalCounts"), count_deltas)
+    return count_deltas
