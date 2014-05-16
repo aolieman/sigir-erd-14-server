@@ -2,7 +2,7 @@
 """
 Build a modified DBpedia Spotlight model by manipulating the raw data.
 """
-import os, json, urllib2, sys
+import os, json, urllib2, sys, re
 import unicodecsv as csv
 from collections import defaultdict
 from vocabulary import get_target_db
@@ -58,7 +58,7 @@ def clean_row(row):
     print "clean_row(%s)" % repr(row)
     for col in row:
         if isinstance(col, basestring):
-            clean.append(col.split('\t')[0].split('\n')[0])
+            clean.append(re.sub(r'\W+', '', col.split('\t')[0]))
         else:
             clean.append(col)
     return clean
