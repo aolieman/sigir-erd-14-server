@@ -117,7 +117,7 @@ def rotate_on_final_query(text_id):
         handler.doRollover()
         
 def redecode_utf8(unicode_s):
-    return unicode_s.encode('cp1252').decode('utf8')
+    return unicode_s.encode('latin1').decode('utf8')
 
 
 if __name__ == '__main__':    
