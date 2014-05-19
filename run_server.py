@@ -120,7 +120,7 @@ def redecode_utf8(unicode_s):
     try:
         return unicode_s.encode('latin1').decode('utf8')
     except UnicodeError:
-        return s
+        return unicode_s
 
 
 if __name__ == '__main__':    
