@@ -136,13 +136,14 @@ def sf_and_total_counts(file_path, count_deltas, add_lowercase=True):
         this_change = count_deltas.pop(row[0], 0)
         if this_change:
             sf_count, total_count = int(row[1]), int(row[2] or -1)
-            for count in (sf_count, total_count):
-                if count < 0:
-                    count = this_change
-                else:
-                    count += this_change
-                if count <= 0:
-                    count = -1
+            if sf_count < 0:
+                sf_count = this_change
+            else:
+                sf_count += this_change
+            if sf_count <= 0:
+                sf_count = -1
+            if total_count != -1 and total_count < sf_count:
+                total_count = sf_count
             if max(sf_count, total_count) > 0:
                 return [[row[0], sf_count, total_count]]
             else:
