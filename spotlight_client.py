@@ -132,7 +132,7 @@ def long_output(target_db, text_id, spotlight_url,
             for cand in ann[u'resource']:
                 if cand[u'uri'] in target_db:
                     fid = target_db[cand[u'uri']][0]
-                    mention = ann[u'name']
+                    mention = unicode(ann[u'name'])
                     begin_offset = str(ann[u'offset'])
                     end_offset = str(ann[u'offset'] + len(mention))
                     f_score = u"{0:.2f}".format(cand[u'finalScore'])
