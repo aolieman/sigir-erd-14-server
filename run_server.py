@@ -28,19 +28,24 @@ spotlight_url = "http://spotlight.sztaki.hu:2222/rest/"
 conf = 0.03
 supp = 0
 posr = 0.0
+cand_param = "multi"
 
 ##
 # Flask views
 ##
 @app.route('/parameters', methods=['GET'])
 def set_parameters():
-    global spotlight_url, conf, supp, posr
+    global spotlight_url, conf, supp, posr, cand_param
     spotlight_url = str(request.args.get('url', spotlight_url))
     conf = float(request.args.get('conf', conf))
     supp = int(request.args.get('supp', supp))
     posr = float(request.args.get('posr', posr))
-    msg = "Parameters set to url={0}, confidence={1:.2f},"\
-          "support={2:d}, PoSR={3:.2f}".format(spotlight_url, conf, supp, posr)
+    cand_param = str(request.args.get('cand', cand_param))
+    if cand_param not in {"single", "multi"}:
+        return 'cand_param must be one of {"single", "multi"}'
+    msg = "Parameters set to url={0}, confidence={1:.2f}, "\
+          "support={2:d}, PoSR={3:.2f}, "\
+          "cand_param={4}".format(spotlight_url, conf, supp, posr, cand_param)
     app.logger.warning(msg)
     return msg
     
@@ -84,7 +89,7 @@ def long_track():
     text = redecode_utf8(request.form['Text'])
         
     body_str = long_output(
-        target_db, text_id, spotlight_url, text, conf, supp
+        target_db, text_id, spotlight_url, text, conf, supp, cand_param
     )
     
     app.logger.warning("\t".join((text_id, repr(text[:500]), run_id)))

@@ -91,7 +91,7 @@ def short_output(target_db, text_id, spotlight_url,
     return out_str
     
 def long_output(target_db, text_id, spotlight_url,
-                text, conf=0.0, supp=0):
+                text, conf=0.0, supp=0, cand_param="single"):
     """
     Get annotations from DBp Spotlight and format them as TSV.
     
@@ -101,9 +101,12 @@ def long_output(target_db, text_id, spotlight_url,
     text: input text in UTF-8 encoding
     conf: confidence threshold for DBp Spotlight
     supp: support threshold for DBp Spotlight
+    cand_param:
+        "single" for post-disambiguation filtering
+        "multi" for pre-disambiguation filtering (first cand in target_db)
     """
     out_str = ""
-    annotations = through_spotlight(spotlight_url, text, 'single', conf, supp)
+    annotations = through_spotlight(spotlight_url, text, cand_param, conf, supp)
     
     # Write annotations to a log file
     with open("logs/long/{0}_annotations.json".format(text_id), 
@@ -114,15 +117,30 @@ def long_output(target_db, text_id, spotlight_url,
         return ""
         
     for ann in annotations:
-        if ann['URI'] in target_db:
-            fid = target_db[ann['URI']][0]
-            mention = unicode(ann[u'surfaceForm'])
-            begin_offset = str(ann[u'offset'])
-            end_offset = str(ann[u'offset'] + len(mention))
-            score = u"{0:.2f}".format(ann[u'similarityScore'])
-            out_str += u"\n" + u"\t".join(
-                (text_id, begin_offset, end_offset, 
-                 fid, ann['URI'], mention, score, "0")
-            )
+        if cand_param == "single":
+            if ann['URI'] in target_db:
+                fid = target_db[ann['URI']][0]
+                mention = unicode(ann[u'surfaceForm'])
+                begin_offset = str(ann[u'offset'])
+                end_offset = str(ann[u'offset'] + len(mention))
+                score = u"{0:.2f}".format(ann[u'similarityScore'])
+                out_str += u"\n" + u"\t".join(
+                    (text_id, begin_offset, end_offset, 
+                     fid, ann['URI'], mention, score, "0")
+                )
+        elif cand_param == "multi":
+            for cand in ann[u'resource']:
+                if cand[u'uri'] in target_db:
+                    fid = target_db[cand[u'uri']][0]
+                    mention = ann[u'name']
+                    begin_offset = str(ann[u'offset'])
+                    end_offset = str(ann[u'offset'] + len(mention))
+                    f_score = u"{0:.2f}".format(cand[u'finalScore'])
+                    c_score = u"{0:.2f}".format(cand[u'contextualScore'])
+                    out_str += u"\n" + u"\t".join(
+                        (text_id, begin_offset, end_offset, 
+                         fid, cand[u'uri'], mention, f_score, c_score)
+                    )
+                    break
             
     return out_str
