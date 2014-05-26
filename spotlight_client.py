@@ -41,11 +41,12 @@ def through_spotlight(spotlight_url, text, cand_param, conf=0.0, supp=0):
         for ann in spotlight_response:
             if u'resource' in ann:
                 if isinstance(ann[u'resource'], dict):
+                    ann[u'resource'][u'uri'] = unicode(ann[u'resource'][u'uri'])
                     ann[u'resource'][u'uri'] = urllib2.unquote(ann[u'resource'][u'uri'])
                     ann[u'resource'] = [ann[u'resource']]
                 else:
                     for cand in ann[u'resource']:
-                        cand[u'uri'] = urllib2.unquote(cand[u'uri'])
+                        cand[u'uri'] = urllib2.unquote(unicode(cand[u'uri']))
                 annotations.append(ann)
     return annotations
 
