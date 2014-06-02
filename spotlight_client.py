@@ -58,7 +58,7 @@ def short_output(target_db, text_id, spotlight_url,
     target_db: dict with target entities in this ERD challenge
     text_id: query id string given in the request
     spotlight_url: URL of a DBpedia Spotlight REST endpoint (incl. trailing slash)
-    text: input text in UTF-8 encoding
+    text: input text in unicode
     conf: confidence threshold for DBp Spotlight
     supp: support threshold for DBp Spotlight
     posr: minimum 'percentage of second rank' to include further candidates
@@ -99,7 +99,7 @@ def long_output(target_db, text_id, spotlight_url,
     target_db: dict with target entities in this ERD challenge
     text_id: query id string given in the request
     spotlight_url: URL of a DBp Spotlight REST endpoint (incl. trailing slash)
-    text: input text in UTF-8 encoding
+    text: input text in unicode
     conf: confidence threshold for DBp Spotlight
     supp: support threshold for DBp Spotlight
     cand_param:
@@ -117,13 +117,17 @@ def long_output(target_db, text_id, spotlight_url,
     if not annotations:
         return ""
         
+    # Check if text contains non-ASCII characters
+    needs_offset_conversion = len(text) != len(text.encode('utf8'))
+        
     for ann in annotations:
         if cand_param == "single":
             if ann['URI'] in target_db:
                 fid = target_db[ann['URI']][0]
                 mention = unicode(ann[u'surfaceForm'])
-                begin_offset = str(ann[u'offset'])
-                end_offset = str(ann[u'offset'] + len(mention))
+                begin_offset, end_offset = get_byte_offsets(
+                    text, ann[u'offset'], mention, needs_offset_conversion
+                )
                 score = u"{0:.2f}".format(ann[u'similarityScore'])
                 out_str += u"\n" + u"\t".join(
                     (text_id, begin_offset, end_offset, 
@@ -134,8 +138,9 @@ def long_output(target_db, text_id, spotlight_url,
                 if cand[u'uri'] in target_db:
                     fid = target_db[cand[u'uri']][0]
                     mention = unicode(ann[u'name'])
-                    begin_offset = str(ann[u'offset'])
-                    end_offset = str(ann[u'offset'] + len(mention))
+                    begin_offset, end_offset = get_byte_offsets(
+                        text, ann[u'offset'], mention, needs_offset_conversion
+                    )
                     f_score = u"{0:.2f}".format(cand[u'finalScore'])
                     c_score = u"{0:.2f}".format(cand[u'contextualScore'])
                     out_str += u"\n" + u"\t".join(
@@ -145,3 +150,12 @@ def long_output(target_db, text_id, spotlight_url,
                     break
             
     return out_str
+    
+def get_byte_offsets(text, u_begin, substr, needs_conversion):
+    if needs_conversion:
+        begin_offset = len(text[:u_begin].encode('utf8'))
+        end_offset = begin_offset + len(substr.encode('utf8'))
+    else:
+        begin_offset = u_begin
+        end_offset = u_begin + len(substr)
+    return str(begin_offset), str(end_offset)
