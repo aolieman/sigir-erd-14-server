@@ -4,7 +4,7 @@ API client functions that offload requests
 to a DBpedia Spotlight server.
 """
 
-import urllib2, json
+import urllib2, json, string
 from spotlight import annotate, candidates, SpotlightException
 from functools import partial
 
@@ -64,6 +64,7 @@ def short_output(target_db, text_id, spotlight_url,
     posr: minimum 'percentage of second rank' to include further candidates
     """
     out_str = ""
+    text = string.capwords(text)
     annotations = through_spotlight(spotlight_url, text, 'multi', conf, supp)
     
     # Append annotations to a log file
