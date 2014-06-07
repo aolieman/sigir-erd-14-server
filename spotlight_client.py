@@ -4,21 +4,23 @@ API client functions that offload requests
 to a DBpedia Spotlight server.
 """
 
-import urllib2, json, string
+import urllib2, json
 from spotlight import annotate, candidates, SpotlightException
 from functools import partial
 
 class SpotlightCallConfiguration(object):
-    def __init__(self, url, cand_param, conf=0.0, supp=0):
+    def __init__(self, url, cand_param, conf=0.0, supp=0, posr=0.0, strf=None):
         self.url = url
         self.cand_param = cand_param
         self.conf = conf
         self.supp = supp
+        self.posr = posr
+        self.strf = strf
         
     def __repr__(self):
         repr_params = {k: repr(v) for k, v in self.__dict__.items()}
         return "<SpotlightCallConfiguration(url={url}, cand_param={cand_param}, \
-                conf={conf}, supp={supp})>".format(**repr_params)
+                conf={conf}, supp={supp}, posr={posr}, strf={strf})>".format(**repr_params)
 
 def through_spotlight(spotlight_call_config, text):
     scc = spotlight_call_config
@@ -39,6 +41,8 @@ def through_spotlight(spotlight_call_config, text):
                   confidence=scc.conf, support=scc.supp,
                   spotter='Default', filters=no_coref_filter)
     try:
+        if spotlight_call_config.strf:
+            text = spotlight_call_config.strf(text)
         spotlight_response = api(text)
     except (SpotlightException, TypeError) as err:
         print err
@@ -62,8 +66,7 @@ def through_spotlight(spotlight_call_config, text):
                 annotations.append(ann)
     return annotations
 
-def short_output(target_db, text_id, spotlight_url,
-                 text, conf=0.0, supp=0, posr=0.0):
+def short_output(target_db, text_id, text, spotlight_call_config):
     """
     Get annotations from DBp Spotlight and format them as TSV.
     
@@ -76,8 +79,13 @@ def short_output(target_db, text_id, spotlight_url,
     posr: minimum 'percentage of second rank' to include further candidates
     """
     out_str = ""
-    text = string.capwords(text)
-    annotations = through_spotlight(spotlight_url, text, 'multi', conf, supp)
+    
+    if isinstance(spotlight_call_config, SpotlightCallConfiguration):
+        spotlight_call_config.cand_param = "multi"    
+        annotations = through_spotlight(spotlight_call_config, text)
+    else:
+        primary_config, additional_config = spotlight_call_config
+        annotations = get_merged_candidates(primary_config, additional_config, text)
     
     # Append annotations to a log file
     with open("logs/short_annotations.json", 'a') as f:
@@ -99,13 +107,12 @@ def short_output(target_db, text_id, spotlight_url,
                 )
                 i += 1
             
-            if cand[u'percentageOfSecondRank'] < posr:
+            if cand[u'percentageOfSecondRank'] < spotlight_call_config.posr:
                 break
                 
     return out_str
     
-def long_output(target_db, text_id, spotlight_url,
-                text, conf=0.0, supp=0, cand_param="single"):
+def long_output(target_db, text_id, text, spotlight_call_config):
     """
     Get annotations from DBp Spotlight and format them as TSV.
     
@@ -120,7 +127,12 @@ def long_output(target_db, text_id, spotlight_url,
         "multi" for pre-disambiguation filtering (first cand in target_db)
     """
     out_str = ""
-    annotations = through_spotlight(spotlight_url, text, cand_param, conf, supp)
+    
+    if isinstance(spotlight_call_config, SpotlightCallConfiguration):  
+        annotations = through_spotlight(spotlight_call_config, text)
+    else:
+        primary_config, additional_config = spotlight_call_config
+        annotations = get_merged_candidates(primary_config, additional_config, text)
     
     # Write annotations to a log file
     with open("logs/long/{0}_annotations.json".format(text_id), 
@@ -134,7 +146,7 @@ def long_output(target_db, text_id, spotlight_url,
     needs_offset_conversion = len(text) != len(text.encode('utf8'))
         
     for ann in annotations:
-        if cand_param == "single":
+        if spotlight_call_config.cand_param == "single":
             if ann['URI'] in target_db:
                 fid = target_db[ann['URI']][0]
                 mention = unicode(ann[u'surfaceForm'])
@@ -146,7 +158,7 @@ def long_output(target_db, text_id, spotlight_url,
                     (text_id, begin_offset, end_offset, 
                      fid, ann['URI'], mention, score, "0")
                 )
-        elif cand_param == "multi":
+        elif spotlight_call_config.cand_param == "multi":
             for cand in ann[u'resource']:
                 if cand[u'uri'] in target_db:
                     fid = target_db[cand[u'uri']][0]

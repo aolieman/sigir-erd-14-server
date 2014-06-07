@@ -3,11 +3,11 @@
 Run a Flask server that responds to requests in the ERD14 format.
 """
 
-import logging
+import logging, string
 from logging import handlers
 from flask import Flask, request
 from vocabulary import get_target_db
-from spotlight_client import short_output, long_output
+from spotlight_client import short_output, long_output, SpotlightCallConfiguration
 
 
 # Read the target db into a dict
@@ -25,30 +25,15 @@ app.logger.addHandler(handler)
 
 # Initialize runtime parameters
 spotlight_url = "http://spotlight.sztaki.hu:2222/rest/"
-conf = 0.03
+conf = 0.3
 supp = 0
 posr = 0.0
-cand_param = "multi"
+cand_param = "single"
+strf = None
 
 ##
 # Flask views
 ##
-@app.route('/parameters', methods=['GET'])
-def set_parameters():
-    global spotlight_url, conf, supp, posr, cand_param
-    spotlight_url = str(request.args.get('url', spotlight_url))
-    conf = float(request.args.get('conf', conf))
-    supp = int(request.args.get('supp', supp))
-    posr = float(request.args.get('posr', posr))
-    cand_param = str(request.args.get('cand', cand_param))
-    if cand_param not in {"single", "multi"}:
-        return 'cand_param must be one of {"single", "multi"}'
-    msg = "Parameters set to url={0}, confidence={1:.2f}, "\
-          "support={2:d}, PoSR={3:.2f}, "\
-          "cand_param={4}".format(spotlight_url, conf, supp, posr, cand_param)
-    app.logger.warning(msg)
-    return msg
-    
 @app.route('/echo', methods=['POST'])
 def echo():
     # Get request parameter values
@@ -66,16 +51,13 @@ def short_track(target_db=target_db):
     run_id = request.form['runID']
     text_id = request.form['TextID']
     text = redecode_utf8(request.form['Text'])
+    spotlight_config = parse_configuration(run_id)
     
-    body_str = short_output(
-        target_db, text_id, spotlight_url,
-        text, conf, supp, posr
-    )
+    body_str = short_output(target_db, text_id, text, spotlight_config)
         
     app.logger.warning("\t".join((text_id, text, run_id)))
     with open("logs/{0}.tsv".format(run_id), 'a') as f:
-        f.write(body_str)
-    rotate_on_final_query(text_id)        
+        f.write(body_str)       
         
     headers = {"Content-Type": "text/plain; charset=utf-8"}
     
@@ -87,10 +69,9 @@ def long_track():
     run_id = request.form['runID']
     text_id = request.form['TextID']
     text = redecode_utf8(request.form['Text'])
+    spotlight_config = parse_configuration(run_id)
         
-    body_str = long_output(
-        target_db, text_id, spotlight_url, text, conf, supp, cand_param
-    )
+    body_str = long_output(target_db, text_id, text, spotlight_config)
     
     app.logger.warning("\t".join((text_id, repr(text[:500]), run_id)))
     with open("logs/long/{0}.txt".format(text_id), 'w') as f:
@@ -102,8 +83,7 @@ def long_track():
         try:
             f.write(body_str)
         except UnicodeEncodeError:
-            f.write(body_str.encode('utf8'))
-    rotate_on_final_query(text_id)        
+            f.write(body_str.encode('utf8'))     
         
     headers = {"Content-Type": "text/plain; charset=utf-8"}
     
@@ -126,6 +106,49 @@ def redecode_utf8(unicode_s):
         return unicode_s.encode('latin1').decode('utf8')
     except UnicodeError:
         return unicode_s
+        
+def parse_config_str(config_str):
+    spotlight_url = "http://spotlight.sztaki.hu:2222/rest/"
+    conf = 0.3
+    supp = 0
+    posr = 0.0
+    cand_param = "single"
+    strf = None    
+    
+    for p_str in config_str.split('_'):
+        print p_str
+        if p_str == "single" or p_str == "multi":
+            cand_param = p_str
+        elif p_str == "capwords":
+            strf = string.capwords
+        elif p_str == "sz":
+            spotlight_url = "http://spotlight.sztaki.hu:2222/rest/"
+        elif p_str == "cl":
+            spotlight_url = "http://e.hum.uva.nl:8082/rest/"
+        elif p_str.startswith('c'):
+            conf = float(p_str[1:])
+        elif p_str.startswith('s'):
+            supp = int(p_str[1:])
+        elif p_str.startswith('posr'):
+            posr = float(p_str[4:])
+    
+    return SpotlightCallConfiguration(
+        spotlight_url, cand_param, conf, supp, posr, strf
+    )
+        
+def parse_configuration(run_id):
+    if run_id.startswith('m_'):
+        config_strs = run_id[2:].split('__')
+        primary_config = parse_config_str(config_strs[0])
+        additional_config = parse_config_str(config_strs[1])
+        for config in (primary_config, additional_config):
+            config.cand_param = "multi"
+        return (primary_config, additional_config)
+        
+    if run_id.startswith('dbp_'):
+        return parse_config_str(run_id[4:])
+    else:
+        return SpotlightCallConfiguration(spotlight_url, cand_param, conf)
 
 
 if __name__ == '__main__':    
