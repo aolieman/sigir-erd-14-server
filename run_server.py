@@ -3,11 +3,11 @@
 Run a Flask server that responds to requests in the ERD14 format.
 """
 
-import logging, string
+import logging, string, json
 from logging import handlers
 from flask import Flask, request
 from vocabulary import get_target_db
-from spotlight_client import short_output, long_output, SpotlightCallConfiguration
+import spotlight_client as scli
 
 
 # Read the target db into a dict
@@ -44,6 +44,23 @@ def echo():
     body_str = run_id+"\n"+text_id+"\n\n"+text
     headers = {"Content-Type": "text/plain; charset=utf-8"}
     return (body_str, 200, headers)
+    
+@app.route('/merge_candidates', methods=['POST'])
+def merge_candidates():
+    # Get request parameter values
+    run_id = request.form['runID']
+    text = redecode_utf8(request.form['Text'])
+    spotlight_config = parse_configuration(run_id)
+    
+    if isinstance(spotlight_config, scli.SpotlightCallConfiguration):  
+        annotations = scli.through_spotlight(spotlight_config, text)
+    else:
+        primary_config, additional_config = spotlight_config
+        annotations = scli.get_merged_candidates(primary_config, additional_config, text)
+        
+    body_str = json.dumps(annotations)
+    headers = {"Content-Type": "application/json"}
+    return (body_str, 200, headers)
 
 @app.route('/short', methods=['POST'])
 def short_track(target_db=target_db):
@@ -53,7 +70,7 @@ def short_track(target_db=target_db):
     text = redecode_utf8(request.form['Text'])
     spotlight_config = parse_configuration(run_id)
     
-    body_str = short_output(target_db, text_id, text, spotlight_config)
+    body_str = scli.short_output(target_db, text_id, text, spotlight_config)
         
     app.logger.warning("\t".join((text_id, text, run_id)))
     with open("logs/{0}.tsv".format(run_id), 'a') as f:
@@ -71,7 +88,7 @@ def long_track():
     text = redecode_utf8(request.form['Text'])
     spotlight_config = parse_configuration(run_id)
         
-    body_str = long_output(target_db, text_id, text, spotlight_config)
+    body_str = scli.long_output(target_db, text_id, text, spotlight_config)
     
     app.logger.warning("\t".join((text_id, repr(text[:500]), run_id)))
     with open("logs/long/{0}.txt".format(text_id), 'w') as f:
@@ -116,7 +133,6 @@ def parse_config_str(config_str):
     strf = None    
     
     for p_str in config_str.split('_'):
-        print p_str
         if p_str == "single" or p_str == "multi":
             cand_param = p_str
         elif p_str == "capwords":
@@ -132,7 +148,7 @@ def parse_config_str(config_str):
         elif p_str.startswith('posr'):
             posr = float(p_str[4:])
     
-    return SpotlightCallConfiguration(
+    return scli.SpotlightCallConfiguration(
         spotlight_url, cand_param, conf, supp, posr, strf
     )
         
@@ -148,7 +164,7 @@ def parse_configuration(run_id):
     if run_id.startswith('dbp_'):
         return parse_config_str(run_id[4:])
     else:
-        return SpotlightCallConfiguration(spotlight_url, cand_param, conf)
+        return scli.SpotlightCallConfiguration(spotlight_url, cand_param, conf)
 
 
 if __name__ == '__main__':    

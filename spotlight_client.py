@@ -86,6 +86,7 @@ def short_output(target_db, text_id, text, spotlight_call_config):
     else:
         primary_config, additional_config = spotlight_call_config
         annotations = get_merged_candidates(primary_config, additional_config, text)
+        spotlight_call_config = primary_config
     
     # Append annotations to a log file
     with open("logs/short_annotations.json", 'a') as f:
@@ -199,9 +200,7 @@ def get_merged_candidates(primary_config, additional_config, text):
             for cand in ann['resource']:
                 if cand['uri'] not in existing_uris:
                     existing_ann['resource'].append(cand)
-                    print "appended", cand
         else:
             offset_mapping[ann['offset']] = ann
-            print "added", ann
             
     return [offset_mapping[offset] for offset in sorted(offset_mapping)]
