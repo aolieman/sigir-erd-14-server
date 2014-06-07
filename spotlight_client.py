@@ -191,9 +191,9 @@ def get_merged_candidates(primary_config, additional_config, text):
     primary_annotations = through_spotlight(primary_config, text)
     additional_annotations = through_spotlight(additional_config, text)
     
-    offset_mapping = {ann['offset']: ann for ann in primary_annotations}
+    offset_mapping = {ann['offset']: ann for ann in (primary_annotations or [])}
     
-    for ann in additional_annotations:
+    for ann in (additional_annotations or []):
         if ann['offset'] in offset_mapping:
             existing_ann = offset_mapping[ann['offset']]
             existing_uris = {cand['uri'] for cand in existing_ann['resource']}
