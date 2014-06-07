@@ -8,23 +8,35 @@ import urllib2, json, string
 from spotlight import annotate, candidates, SpotlightException
 from functools import partial
 
+class SpotlightCallConfiguration(object):
+    def __init__(self, url, cand_param, conf=0.0, supp=0):
+        self.url = url
+        self.cand_param = cand_param
+        self.conf = conf
+        self.supp = supp
+        
+    def __repr__(self):
+        repr_params = {k: repr(v) for k, v in self.__dict__.items()}
+        return "<SpotlightCallConfiguration(url={url}, cand_param={cand_param}, \
+                conf={conf}, supp={supp})>".format(**repr_params)
 
-def through_spotlight(spotlight_url, text, cand_param, conf=0.0, supp=0):
-    if cand_param == "single":
+def through_spotlight(spotlight_call_config, text):
+    scc = spotlight_call_config
+    if scc.cand_param == "single":
         cand_uri = "annotate"
         cand_function = annotate
-    elif cand_param == "multi":
+    elif scc.cand_param == "multi":
         cand_uri = "candidates"
         cand_function = candidates
     else: raise Exception("Incorrect cand_param provided")
-    api_url = spotlight_url + cand_uri
+    api_url = scc.url + cand_uri
 
     no_coref_filter = {
         'coreferenceResolution': False
     }
 
     api = partial(cand_function, api_url,
-                  confidence=conf, support=supp,
+                  confidence=scc.conf, support=scc.supp,
                   spotter='Default', filters=no_coref_filter)
     try:
         spotlight_response = api(text)
@@ -33,11 +45,11 @@ def through_spotlight(spotlight_url, text, cand_param, conf=0.0, supp=0):
         return None
         
     annotations = []
-    if cand_param == "single":
+    if scc.cand_param == "single":
         for ann in spotlight_response:
             ann[u'URI'] = urllib2.unquote(ann[u'URI'].split('resource/')[-1])
             annotations.append(ann)
-    elif cand_param == "multi":
+    elif scc.cand_param == "multi":
         for ann in spotlight_response:
             if u'resource' in ann:
                 if isinstance(ann[u'resource'], dict):
@@ -160,3 +172,24 @@ def get_byte_offsets(text, u_begin, substr, needs_conversion):
         begin_offset = u_begin
         end_offset = u_begin + len(substr)
     return str(begin_offset), str(end_offset)
+    
+
+def get_merged_candidates(primary_config, additional_config, text):
+    primary_annotations = through_spotlight(primary_config, text)
+    additional_annotations = through_spotlight(additional_config, text)
+    
+    offset_mapping = {ann['offset']: ann for ann in primary_annotations}
+    
+    for ann in additional_annotations:
+        if ann['offset'] in offset_mapping:
+            existing_ann = offset_mapping[ann['offset']]
+            existing_uris = {cand['uri'] for cand in existing_ann['resource']}
+            for cand in ann['resource']:
+                if cand['uri'] not in existing_uris:
+                    existing_ann['resource'].append(cand)
+                    print "appended", cand
+        else:
+            offset_mapping[ann['offset']] = ann
+            print "added", ann
+            
+    return [offset_mapping[offset] for offset in sorted(offset_mapping)]
