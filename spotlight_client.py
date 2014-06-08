@@ -134,6 +134,7 @@ def long_output(target_db, text_id, text, spotlight_call_config):
     else:
         primary_config, additional_config = spotlight_call_config
         annotations = get_merged_candidates(primary_config, additional_config, text)
+        spotlight_call_config = primary_config
     
     # Write annotations to a log file
     with open("logs/long/{0}_annotations.json".format(text_id), 
