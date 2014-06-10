@@ -7,6 +7,10 @@ to a DBpedia Spotlight server.
 import urllib2, json
 from spotlight import annotate, candidates, SpotlightException
 from functools import partial
+from SPARQLWrapper import SPARQLWrapper, JSON
+
+# initialize EN SPARQL Wrapper
+sparql = SPARQLWrapper("http://dbpedia.org/sparql")
 
 class SpotlightCallConfiguration(object):
     def __init__(self, url, cand_param, conf=0.0, supp=0, posr=0.0, strf=None):
@@ -64,7 +68,9 @@ def through_spotlight(spotlight_call_config, text):
                     for cand in ann[u'resource']:
                         cand[u'uri'] = urllib2.unquote(unicode(cand[u'uri']))
                 annotations.append(ann)
-    return annotations
+                
+    offset_mapping = {ann['offset']: ann for ann in (annotations or [])}
+    return [offset_mapping[offset] for offset in sorted(offset_mapping)]
 
 def short_output(target_db, text_id, text, spotlight_call_config):
     """
@@ -146,10 +152,13 @@ def long_output(target_db, text_id, text, spotlight_call_config):
         
     # Check if text contains non-ASCII characters
     needs_offset_conversion = len(text) != len(text.encode('utf8'))
-        
+    
+    broader_geo_for_preceding = set()
+    
     for ann in annotations:
         if spotlight_call_config.cand_param == "single":
-            if ann['URI'] in target_db:
+            if (ann['URI'] in target_db and
+                ann['URI'] not in broader_geo_for_preceding):
                 fid = target_db[ann['URI']][0]
                 mention = unicode(ann[u'surfaceForm'])
                 begin_offset, end_offset = get_byte_offsets(
@@ -160,9 +169,12 @@ def long_output(target_db, text_id, text, spotlight_call_config):
                     (text_id, begin_offset, end_offset, 
                      fid, ann['URI'], mention, score, "0")
                 )
+                broader_geo_for_preceding = get_broader_geo_entities(ann['URI'])                
+                
         elif spotlight_call_config.cand_param == "multi":
             for cand in ann[u'resource']:
-                if cand[u'uri'] in target_db:
+                if (cand[u'uri'] in target_db and
+                    cand[u'uri'] not in broader_geo_for_preceding):
                     fid = target_db[cand[u'uri']][0]
                     mention = unicode(ann[u'name'])
                     begin_offset, end_offset = get_byte_offsets(
@@ -174,6 +186,7 @@ def long_output(target_db, text_id, text, spotlight_call_config):
                         (text_id, begin_offset, end_offset, 
                          fid, cand[u'uri'], mention, f_score, c_score)
                     )
+                    broader_geo_for_preceding = get_broader_geo_entities(cand[u'uri'])
                     break
             
     return out_str
@@ -205,3 +218,26 @@ def get_merged_candidates(primary_config, additional_config, text):
             offset_mapping[ann['offset']] = ann
             
     return [offset_mapping[offset] for offset in sorted(offset_mapping)]
+
+def get_broader_geo_entities(wiki_id):
+    sparql.setQuery("""
+        SELECT ?country, ?region, ?state
+        WHERE {{
+            {uri} dbpedia-owl:country ?country .
+            OPTIONAL {{ {uri} dbpedia-owl:isPartOf ?region . }} .
+            OPTIONAL {{ {uri} dbpedia-owl:state ?state . }}
+        }}
+    """.format(uri="<http://dbpedia.org/resource/{}>".format(wiki_id)))
+    sparql.setReturnFormat(JSON)
+    results = sparql.query().convert()
+    res_bindings = results['results']['bindings']
+    
+    if len(res_bindings) == 0:
+        return set()
+        
+    geo_entities = set()
+    for res in res_bindings:
+        for val in res.values():
+            geo_entities.add(val['value'].split('resource/')[-1])
+    
+    return geo_entities
