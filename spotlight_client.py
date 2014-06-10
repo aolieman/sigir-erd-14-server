@@ -236,7 +236,10 @@ def get_broader_geo_entities(wiki_id):
         }}
     """.format(uri="<http://dbpedia.org/resource/{}>".format(wiki_id)))
     sparql.setReturnFormat(JSON)
-    results = sparql.query().convert()
+    try:
+        results = sparql.query().convert()
+    except Exception:
+        return set()
     res_bindings = results['results']['bindings']
     
     if len(res_bindings) == 0:
