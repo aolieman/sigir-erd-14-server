@@ -169,7 +169,10 @@ def long_output(target_db, text_id, text, spotlight_call_config):
                     (text_id, begin_offset, end_offset, 
                      fid, ann['URI'], mention, score, "0")
                 )
-                broader_geo_for_preceding = get_broader_geo_entities(ann['URI'])                
+                if "DBpedia:Place" in ann['types']:
+                    broader_geo_for_preceding = get_broader_geo_entities(ann['URI'])
+                else:
+                    broader_geo_for_preceding = set()
                 
         elif spotlight_call_config.cand_param == "multi":
             for cand in ann[u'resource']:
@@ -186,7 +189,10 @@ def long_output(target_db, text_id, text, spotlight_call_config):
                         (text_id, begin_offset, end_offset, 
                          fid, cand[u'uri'], mention, f_score, c_score)
                     )
-                    broader_geo_for_preceding = get_broader_geo_entities(cand[u'uri'])
+                    if "DBpedia:Place" in cand['types']:
+                        broader_geo_for_preceding = get_broader_geo_entities(cand[u'uri'])
+                    else:
+                        broader_geo_for_preceding = set()
                     break
             
     return out_str
@@ -220,6 +226,7 @@ def get_merged_candidates(primary_config, additional_config, text):
     return [offset_mapping[offset] for offset in sorted(offset_mapping)]
 
 def get_broader_geo_entities(wiki_id):
+    wiki_id = encode_non_ascii(wiki_id)
     sparql.setQuery("""
         SELECT ?country, ?region, ?state
         WHERE {{
@@ -241,3 +248,7 @@ def get_broader_geo_entities(wiki_id):
             geo_entities.add(val['value'].split('resource/')[-1])
     
     return geo_entities
+    
+def encode_non_ascii(s):
+    return urllib2.quote(s.encode('utf8'),
+                         ''.join([chr(i) for i in range(128)]))
