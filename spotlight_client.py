@@ -245,7 +245,9 @@ def get_broader_geo_entities(wiki_id):
     geo_entities = set()
     for res in res_bindings:
         for val in res.values():
-            geo_entities.add(val['value'].split('resource/')[-1])
+            geo_entities.add(
+                urllib2.unquote(val['value'].split('resource/')[-1])
+            )
     
     return geo_entities
     
