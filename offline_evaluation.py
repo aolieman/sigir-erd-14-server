@@ -23,7 +23,6 @@ def query_server(query_list, run_id, url):
         if resp.status_code != 200:
             print "Breaking due to non-200 response"
             break
-        print resp.text
         out_str += resp.content
         
     f_path = os.path.join("evaluation/system_output", run_id + ".tsv")
@@ -123,7 +122,6 @@ def calculate_performance(comparison_df):
         'FP_should_be_NIL_df': FP_should_be_NIL_df,
         'FP_wrong_disambiguation_df': FP_wrong_disambiguation_df
     }
-    print overview
     return data_and_stats
     
 def f_score(precision, recall, beta):
