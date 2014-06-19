@@ -18,6 +18,9 @@ python run_server.py
 
 ## Error Analysis
 ### Long track
+Use `offline_evaluation.py` to compare a run's output with a golden standard.
+System output is written to the directory `evaluation/system_output/`.
+Performance statistics and intermediary data is written to `evaluation/error_analyses/`.
 ```python
 cd sigir-erd-14-server
 python
