@@ -1,5 +1,5 @@
 Flask>=0.10.1
-unicodecsv>=0.9.6
+unicodecsv>=0.9.4
 git+https://github.com/aolieman/pyspotlight.git
 pandas
 SPARQLWrapper
