@@ -3,8 +3,34 @@
 Functions for offline evaluation, e.g. using
 the TREC example queries and annotations.
 """
-import csv, requests
+import csv, requests, os, json
 import pandas as pd
+
+# Use a corrected golden standard for long track
+fp_gs = "evaluation/golden_standard_1906.tsv"
+
+def query_server(query_list, run_id, url):
+    """Sends queries to a running server.
+    """
+    out_str = ""
+    for query in query_list:
+        payload = {
+                    'runID': run_id,
+                    'TextID': query[0],
+                    'Text': query[1]
+        }
+        resp = requests.post(url, data=payload)
+        if resp.status_code != 200:
+            print "Breaking due to non-200 response"
+            break
+        out_str += resp.content
+        
+    f_path = os.path.join("evaluation/system_output", run_id + ".tsv")
+    abs_path = os.path.abspath(f_path)
+    with open(abs_path, 'w') as f:
+        f.write(out_str[1:]) # strip initial newline
+    
+    return abs_path
 
 # Short track
 
@@ -15,23 +41,20 @@ def read_tsv_queries(file_path="../Trec_beta.query.txt"):
         )]
         
 
-def query_local_server(query_list, run_id):
-    """Sends queries to a local server.
-    Assumes a server listens locally on port 5000.
-    """
-    for query in query_list:
-        payload = {
-                    'runID': run_id,
-                    'TextID': query[0],
-                    'Text': query[1]
-        }
-        url = "http://localhost:5000/short"
-        resp = requests.post(url, data=payload)
-        print payload
-        if resp.status_code != 200:
-            break
-
 # Long track
+
+def read_document_queries(dir_path="evaluation/documents"):
+    doc_file_names = sorted([fn for fn in os.listdir(dir_path) 
+                             if fn.endswith(".txt")])
+    query_list = []
+    
+    for fn in doc_file_names:
+        text_id = fn[:-4]
+        with open(os.path.join(dir_path, fn), 'r') as f:
+            doc_text = f.read()
+        query_list.append((text_id, doc_text))
+        
+    return query_list
 
 def load_comparison(fp_golden_standard, fp_sys_output):
     gs = pd.read_csv(fp_golden_standard, sep="\t", encoding='utf8', quotechar='~', header=None)
@@ -99,12 +122,27 @@ def calculate_performance(comparison_df):
         'FP_should_be_NIL_df': FP_should_be_NIL_df,
         'FP_wrong_disambiguation_df': FP_wrong_disambiguation_df
     }
-    print overview
     return data_and_stats
     
 def f_score(precision, recall, beta):
     return (1+beta**2)*(precision*recall)/((beta**2*precision)+recall)
     
-fp_gs = r'G:\MyData\Dropbox\ExPoSe\golden_standard.tsv'
-fp_so = r'G:\MyData\ExPoSe\SIGIR ERD 2014\sigir-erd-14-server\logs\long\dbp_sz_c0.3_s0_single.tsv'
+
+def multiple_runs_long(run_id_list, url):
+    query_list = read_document_queries()
     
+    for run_id in run_id_list:
+        fp_so = query_server(query_list, run_id, url)
+        comparison_df = load_comparison(fp_gs, fp_so)
+        data_and_stats = calculate_performance(comparison_df)
+        dir_path = "evaluation/error_analyses/{0}".format(run_id)
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        f_path = os.path.join(dir_path, "{0}.{1}")
+        for k, v in data_and_stats.items():
+            try:
+                v.to_csv(f_path.format(k, "tsv"), sep="\t", encoding='utf8', index=False)
+            except AttributeError:
+                print run_id, k, v
+                with open(f_path.format(k, "json"), 'wb') as f:
+                    json.dump(v, f, sort_keys=True)
