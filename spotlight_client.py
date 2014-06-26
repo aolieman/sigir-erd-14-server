@@ -220,8 +220,10 @@ def get_merged_candidates(primary_config, additional_config, text):
             for cand in ann['resource']:
                 if cand['uri'] not in existing_uris:
                     existing_ann['resource'].append(cand)
-        else:
-            offset_mapping[ann['offset']] = ann
+        # Let's not add surface forms from the additional annotations
+        # This should give more control over what is spotted
+#        else:
+#            offset_mapping[ann['offset']] = ann
             
     return [offset_mapping[offset] for offset in sorted(offset_mapping)]
 
