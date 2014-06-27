@@ -50,7 +50,7 @@ def read_document_queries(dir_path="evaluation/documents"):
     
     for fn in doc_file_names:
         text_id = fn[:-4]
-        with open(os.path.join(dir_path, fn), 'r') as f:
+        with open(os.path.join(dir_path, fn), 'rb') as f:
             doc_text = f.read()
         query_list.append((text_id, doc_text))
         
