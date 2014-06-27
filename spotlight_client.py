@@ -153,12 +153,9 @@ def long_output(target_db, text_id, text, spotlight_call_config):
     # Check if text contains non-ASCII characters
     needs_offset_conversion = len(text) != len(text.encode('utf8'))
     
-    broader_geo_for_preceding = set()
-    
     for ann in annotations:
         if spotlight_call_config.cand_param == "single":
-            if (ann['URI'] in target_db and
-                ann['URI'] not in broader_geo_for_preceding):
+            if ann['URI'] in target_db:
                 fid = target_db[ann['URI']][0]
                 mention = unicode(ann[u'surfaceForm'])
                 begin_offset, end_offset = get_byte_offsets(
@@ -169,15 +166,10 @@ def long_output(target_db, text_id, text, spotlight_call_config):
                     (text_id, begin_offset, end_offset, 
                      fid, ann['URI'], mention, score, "0")
                 )
-                if "DBpedia:Place" in ann['types']:
-                    broader_geo_for_preceding = get_broader_geo_entities(ann['URI'])
-                else:
-                    broader_geo_for_preceding = set()
                 
         elif spotlight_call_config.cand_param == "multi":
             for cand in ann[u'resource']:
-                if (cand[u'uri'] in target_db and
-                    cand[u'uri'] not in broader_geo_for_preceding):
+                if cand[u'uri'] in target_db:
                     fid = target_db[cand[u'uri']][0]
                     mention = unicode(ann[u'name'])
                     begin_offset, end_offset = get_byte_offsets(
@@ -189,10 +181,6 @@ def long_output(target_db, text_id, text, spotlight_call_config):
                         (text_id, begin_offset, end_offset, 
                          fid, cand[u'uri'], mention, f_score, c_score)
                     )
-                    if "DBpedia:Place" in cand['types']:
-                        broader_geo_for_preceding = get_broader_geo_entities(cand[u'uri'])
-                    else:
-                        broader_geo_for_preceding = set()
                     break
             
     return out_str
